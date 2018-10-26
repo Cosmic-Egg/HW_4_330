@@ -1,0 +1,201 @@
+---
+title: "HW-4"
+author: "Chris Trippe & Ethan Kemeny"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(comment = "")
+
+```
+```{r, message = FALSE}
+library(tidyverse)
+library(MASS)
+library(lmtest)
+library(car)
+library(gridExtra)
+```
+1. There are many ways to measure body fat, but researchers are seeking out a simpler method. One technique is submerging a body in a tank of water and measuring the increase in water level. The submersion method was used to measure the percentage of fat of 252 men, then their age, weight, heigh and 10 body circumference measurements were taken. The given data will be used to see what variables can be used to best measure a person's body fat percentage. A model can be created from this data to better predict body fat percentage without going through more complex processes such as full body water submersion. 
+```{r}
+#read in data
+body_data <- read.table(file = "BodyFat.txt", header = TRUE)
+```
+
+2.
+```{r message=FALSE, warning=FALSE, fig.width=7, fig.align='center'}
+# look at variables relation to brozek and see cor values
+GGally::ggpairs(body_data, columns = 1:7)
+
+
+```
+This plot shows several of the variables and their correlation values.  We are mostly interested in how the variables relate to body fat percentage.  We can see that they look fairly linear.  That is, as the variables increase, so does body fat percentage for all variables except height.  Looking at the correlation values we can see that for body fat percentage they are all positive except for height once again.  We will pull those out to get a better look.
+
+```{r}
+
+# age weight height neck chest abdom hip thigh knee ankle biceps forearm wrist
+
+##Multiple Regression Model
+body_slr <- lm(brozek~.,body_data)
+
+
+##Correlation
+cor(as.matrix(body_data[,1]), as.matrix(body_data[,-1]))
+```
+Here we can see the correlation between the variable and body fat percentage. Most of them are fairly strong except age, height, ankle, forearm, and wrist.  With height, there seems to be almost no correlation.
+
+3.
+
+$$ y_i = \beta_0 + \beta_1x_{i1} + \beta_2x_{i2} + \dots + \beta_{13}x_{i13} + \epsilon_{ip} \text{ where } \epsilon_i \sim \mathcal{N}(\mu,\,\sigma^{2})$$
+
+$y_i$ is the $i^{th}$ person's body fat percentage.
+
+$x_ip$ is the $i^{th}$ person's $p^{th}$ explanitory variable measurement. For example, $x_{i1}$ ith the $i^{th}$ person's age.
+
+$\beta_0$ is the y-intercept; on average, what you would expect a person's body fat percentage to be when all explanatory variables are equal to zero.
+
+$\beta_1$ is the slope coefficient that pertains to age; as a person's age increases by 1 year, a person's body fat is expected to increase by $\beta_1$ percent, on average, assuming all other explanatory variables are held constant.
+
+$\beta_2$ is the slope coefficient that pertains to weight; as a person's weight increases by 1 pound, a person's body fat is expected to increase by $\beta_2$ percent, on average, assuming all other explanatory variables are held constant.
+
+$\beta_{13}$ is the slope coefficient that pertains to wrist circumference; as a person's wrist circumference increases by 1 centimeter, a person's body fat is expected to increase by $\beta_{13}$ percent, on average, assuming all other explanatory variables are held constant.
+
+$\epsilon_{ip}$ is the residual; the error associated with the $i^{th}$ person's $p^{th}$ explanitory variable.
+
+4.
+
+```{r}
+coef <- body_slr$coefficients
+ # + \epsilon_i \text{ where } \epsilon_i \sim \mathcal{N}(\mu,\,\sigma^{2})
+
+```
+
+
+$$ \hat{y_i} = 0.0568x_{i1} - 0.0803x_{i2} - 0.0646x_{i3} - 0.4375x_{i4} - 0.0236x_{i5} + 0.8854x_{i6} - 0.1984x_{i7} + 0.2319x_{i8} - 0.0117x_{i9} + 0.1635x_{i10} + 0.1528x_{i11} + 0.4305x_{i12} - 1.4766x_{i13} -15.2923 $$
+
+
+
+On average, we expect a person's body fat percentage to be -15.2923 when all explanatory variables are equal to zero.
+
+As a person's age increases by 1 year, a person's body fat is expected to increase by 0.0568 percent, on average, assuming all other explanatory variables are held constant.
+
+As a person's weight increases by 1 pound, a person's body fat is expected to decrease by 0.0803 percent, on average, assuming all other explanatory variables are held constant.
+
+As a person's wrist circumference increases by 1 centimeter, a person's body fat is expected to decrease by 1.4766 percent, on average, assuming all other explanatory variables are held constant.
+
+5.
+
+In order to use a multiple linear regression model, the model must be linear, a person's body fat percentage must be independent of all other workers body fat percentage, the residuals must be normally distributed about the fitted line, and the residuals must have equal variance about the line. 
+
+```{r fig.height=3, fig.width=4}
+##Using added-variable plots to check for linearity
+avPlot(body_slr, variable = "age")
+avPlot(body_slr, variable = "weight")
+avPlot(body_slr, variable = "height")
+avPlot(body_slr, variable = "neck")
+avPlot(body_slr, variable = "chest")
+avPlot(body_slr, variable = "abdom")
+avPlot(body_slr, variable = "hip")
+avPlot(body_slr, variable = "thigh")
+avPlot(body_slr, variable = "knee")
+avPlot(body_slr, variable = "ankle")
+avPlot(body_slr, variable = "biceps")
+avPlot(body_slr, variable = "forearm")
+avPlot(body_slr, variable = "wrist")
+
+
+```
+
+They all look approximately linear, though some relationships may be weak, such as height, ankle, and wrist.
+
+```{r}
+#bp test for model to test equal variance
+bptest(body_slr)
+```
+
+The p-value for the Breusch-Pagan test is 0.1209 which is greater than $alpha =$ 0.5. This means we fail to reject the null hypothesis and conclude that the residuals have equal variance about the line.
+
+```{r}
+#ks test for model to test normality of residuals
+ks.test(stdres(body_slr),"pnorm")
+```
+
+The p-value for the Kolmogorov-Smirnov test is 0.822 which is greater than $alpha =$ 0.5. This means we fail to reject the null hypothesis and conclude that the residuals are normally distributed about the line.
+
+It's safe to assume that the body fat percentages of each person are independent. Some of the only worries would be that if all these people come from the same company, their activity levels may be the same as well as what they eat if they have a cafeteria or certain restaurants nearby. However, this will be considered negligent and we'll conclude that the body fat percentages are independent.
+
+```{r}
+## Fit transformed model and verify 
+
+
+
+# Cross validate
+n.cv <- 500
+n.test <- .1*nrow(body_data) #10%
+bias <- rep(NA,n.cv)
+rpmse <- rep(NA,n.cv)
+coverage <- rep(NA,n.cv)
+width <- rep(NA,n.cv)
+for(cv in 1:n.cv){
+  
+  test.obs <- sample(nrow(body_data),n.test)
+  test.set <- body_data[test.obs,]
+  train.set <- body_data[-test.obs,]
+  
+  train.lm <- lm(brozek~.,data=train.set)
+  test.preds <- predict.lm(train.lm,newdata=test.set,interval="prediction")
+  
+  bias[cv] <- mean(test.preds[,1]-test.set$brozek)
+  rpmse[cv] <- sqrt(mean(test.preds[,1]-test.set$brozek)^2)
+  coverage[cv] <- mean(test.set$brozek > test.preds[,2] & test.set$brozek < test.preds[,3])
+  width[cv] <- mean(test.preds[,3]-test.preds[,2])
+}
+
+# bias.hist <- ggplot()+geom_histogram(aes(x=bias))+xlab('Bias')+ylab('Count')
+# 
+# rpmse.hist <- ggplot()+geom_histogram(aes(x=rpmse))+xlab('RPMSE')+ylab('Count')
+# 
+# coverage.hist <- ggplot()+geom_histogram(aes(x=coverage))+xlab('Coverage')+ylab('Count')
+# 
+# width.hist <- ggplot()+geom_histogram(aes(x=width/2))+xlab('Half Width')+ylab('Count')
+# 
+# grid.arrange(bias.hist,rpmse.hist,coverage.hist,width.hist,nrow=2)
+
+
+```
+
+
+```{r}
+# R-squared
+r2 <- round(summary(body_slr)$r.squared,4)
+
+#Cross-Validation statistics
+bias_mean <- round(mean(bias),4)
+rpmse_mean <- round(mean(rpmse),4)
+coverage_mean <- mean(coverage)
+width_mean <- mean(width)
+```
+Using a cross-validation study of 500 samples we are able to get a sense of how accurate our model is at predicting body fat percentage.  The bias is `r bias_mean`.  This means our model typically predicts body fat percentage `r bias_mean` above the actual value on average. That value is relatively small so we feel our model isn't very biased. The root prediction mean squared error value of `r rpmse_mean` tells us our predictions miss the mark by an average of `r rpmse_mean`. 
+
+We also wanted to look at our prediction intervals or the low and high end of our estimated values.  The study returned a coverage of `r coverage_mean` which is the percentage of prediction intervals that contain the actual value.  With a width of `r width_mean`, we can conclude that our prediction intervals are about `r width_mean`% wide which is fairly large which would make sense of why our coverage is also large.
+
+
+Our model has an $R^2$ value of `r r2`.  This means that the variables together are able to explain `r r2*100`% of the variation in body fat percentage. This means our model does a good job of fitting the data.  It is not the best because there is still a variation on body fat we can't explain, but it is enough to feel comfortable using our model. 
+
+This $R^2$ value with the other statistics explained above shows that our model does a fairly good job at fitting the data and predicting body fat percentage.
+
+
+#7
+For this person we would enter all of the values of age, weight, height, etc. into our linear model. Then using the coefficents from the model we would calculate the estimated body fat percentage.
+```{r}
+# prediction data frame
+dframe <- data.frame(age= 50,
+weight= 203, height= 67, neck= 40.2, chest=114.8, abdom=108.1, hip=102.5, thigh=61.3,
+knee= 41.1, ankle= 24.7, biceps= 34.1, forearm= 31, wrist= 18.3)
+
+#predicted value
+predict_values <- predict.lm(body_slr, dframe, interval = "prediction")
+```
+Using the model we get a prediction of `r predict_values[1]`.  This means for a person with the measurements given, we would expect them to have `r predict_values[1]`% body fat.  We are 95% confident that the person's actual body fat percentage would be between `r predict_values[2]`% and `r predict_values[3]`%.  
