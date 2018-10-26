@@ -1,0 +1,153 @@
+---
+title: "330-HW-4"
+author: "Chris Trippe"
+date: "10/21/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+1.There are many ways to measure body fat, but researchers are seeking out a simpler method. One technique is submerging a body in a tank of water and measuring the increase in water level. The submersion method was used to measure the percentage of fat of 252 men, then their age, weight, heigh and 10 body circumference measurements were taken. The given data will be used to see what variables can be used to best measure a person's body fat percentage. A model can be created from this data to better predict body fat percentage without going through more complex processes such as full body water submersion. 
+
+2.
+
+```{r, message = FALSE}
+library(tidyverse)
+library(MASS)
+library(lmtest)
+library(car)
+library(gridExtra)
+```
+age weight height neck chest abdom hip thigh knee ankle biceps forearm wrist
+```{r}
+body_data <- read.table(file = "BodyFat.txt", header = TRUE)
+
+##Multiple Regression Model
+body_slr <- lm(brozek~.,body_data)
+
+
+##Correlation
+cor(as.matrix(body_data[,1]), as.matrix(body_data[,-1]))
+```
+
+```{r}
+
+```
+3.
+
+$$y_i = \beta_0 + \beta_1x_{i1} + \beta_2x_{i2} + \dots + \beta_{13}x_{i13} + \epsilon_{ip} \text{ where } \epsilon_i \sim \mathcal{N}(\mu,\,\sigma^{2})$$
+
+$y_i$ is the $i^{th}$ person's body fat percentage.
+
+$x_ip$ is the $i^{th}$ person's $p^{th}$ explanitory variable measurement. For example, $x_{i1}$ ith the $i^{th}$ person's age.
+
+$\beta_0$ is the y-intercept; on average, what you would expect a person's body fat percentage to be when all explanitory varibales are equal to zero.
+
+$\beta_1$ is the slope coefficient that pertains to age; as a person's age increases by 1 year, a person's body fat is expected to increase by $\beta_1$ percent, on average, assuming all other explanitory variables are held constant.
+
+$\beta_2$ is the slope coefficient that pertains to weight; as a person's weight increases by 1 pound, a person's body fat is expected to increase by $\beta_2$ percent, on average, assuming all other explanitory variables are held constant.
+
+$\beta_{13}$ is the slope coefficient that pertains to wrist circumference; as a person's wrist cicumference increases by 1 centimeter, a person's body fat is expected to increase by $\beta_{13}$ percent, on average, assuming all other explanitory variables are held constant.
+
+$\epsilon_{ip}$ is the residual; the error associated with the $i^{th}$ person's $p^{th}$ explanitory variable.
+
+4.
+
+```{r}
+body_slr$coefficients
+```
+
+$$y_i = \beta_0 + 0.0568x_{i1} - 0.0803x_{i2} - 0.0646x_{i3} - 0.4375x_{i4} - 0.0236x_{i5} + 0.8854x_{i6} - 0.1984x_{i7} + 0.2319x_{i8} -\\ 0.0117x_{i9} + 0.1635x_{i10} + 0.1528x_{i11} + 0.4305x_{i12} - 1.4766x_{i13} + \epsilon_i \text{ where } \epsilon_i \sim \mathcal{N}(\mu,\,\sigma^{2})$$
+
+On average, we expect a person's body fat percentage to be -15.2923 when all explanitory varibales are equal to zero.
+
+As a person's age increases by 1 year, a person's body fat is expected to increase by 0.0568 percent, on average.
+
+As a person's weight increases by 1 pound, a person's body fat is expected to decrease by 0.0803 percent, on average, assuming all other explanitory variables are held constant.
+
+As a person's wrist cicumference increases by 1 centimeter, a person's body fat is expected to increase by $\beta_{13}$ percent, on average, assuming all other explanitory variables are held constant.
+
+5.
+
+In order to use a multiple linear regression model, the model must be linear, a person's body fat percentage must be independent from all other workers body fat percentage, the residuals must be normally distributed about the fitted line, and the residuals must have equal variance about the line. 
+
+```{r}
+##Using added-variable plots to check for linearity
+avPlot(body_slr, variable = "age")
+avPlot(body_slr, variable = "weight")
+avPlot(body_slr, variable = "height")
+avPlot(body_slr, variable = "neck")
+avPlot(body_slr, variable = "chest")
+avPlot(body_slr, variable = "abdom")
+avPlot(body_slr, variable = "hip")
+avPlot(body_slr, variable = "thigh")
+avPlot(body_slr, variable = "knee")
+avPlot(body_slr, variable = "ankle")
+avPlot(body_slr, variable = "biceps")
+avPlot(body_slr, variable = "forearm")
+avPlot(body_slr, variable = "wrist")
+
+
+```
+
+They all look approximately linear, though some relationships may be weak, such as height, ankle and wrist.
+
+```{r}
+bptest(body_slr)
+```
+
+The p-value for the Breusch-Pagan test is 0.1209 which is greater than $alpha =$ 0.5. This means we fail to reject the null hypothesis and conclude that the residuals have equal variance about the line.
+
+```{r}
+ks.test(stdres(body_slr),"pnorm")
+```
+
+The p-value for the Kolmogorov-Smirnov test is 0.822 which is greater than $alpha =$ 0.5. This means we fail to reject the null hypothesis and conclude that the residuals are normally distributed about the line.
+
+It's safe to assume that the body fat percentages of each person are independent. Some of the only worries would be that if all these people come from the same company, their activity levels may be the same as well as what they eat if they have a cafeteria or certain restraunts nearby. However, this will be considered negligent and we'll conclude that the body fat percentages are independent.
+
+```{r}
+## Fit transformed model and verify 
+
+# R-squared
+summary(body_slr)$r.squared
+
+# Cross validate
+n.cv <- 500
+n.test <- .1*nrow(body_data) #10%
+bias <- rep(NA,n.cv)
+rpmse <- rep(NA,n.cv)
+coverage <- rep(NA,n.cv)
+width <- rep(NA,n.cv)
+for(cv in 1:n.cv){
+  
+  test.obs <- sample(nrow(body_data),n.test)
+  test.set <- body_data[test.obs,]
+  train.set <- body_data[-test.obs,]
+  
+  train.lm <- lm(brozek~.,data=train.set)
+  test.preds <- predict.lm(train.lm,newdata=test.set,interval="prediction")
+  
+  bias[cv] <- mean(test.preds[,1]-test.set$brozek)
+  rpmse[cv] <- sqrt(mean(test.preds[,1]-test.set$brozek)^2)
+  coverage[cv] <- mean(test.set$brozek > test.preds[,2] & test.set$brozek < test.preds[,3])
+  width[cv] <- mean(test.preds[,3]-test.preds[,2])
+}
+
+bias.hist <- ggplot()+geom_histogram(aes(x=bias))+xlab('Bias')+ylab('Count')
+
+rpmse.hist <- ggplot()+geom_histogram(aes(x=rpmse))+xlab('RPMSE')+ylab('Count')
+
+coverage.hist <- ggplot()+geom_histogram(aes(x=coverage))+xlab('Coverage')+ylab('Count')
+
+width.hist <- ggplot()+geom_histogram(aes(x=width/2))+xlab('Half Width')+ylab('Count')
+
+grid.arrange(bias.hist,rpmse.hist,coverage.hist,width.hist,nrow=2)
+
+mean(bias)
+mean(rpmse)
+mean(coverage)
+mean(width/2)
+```
+
